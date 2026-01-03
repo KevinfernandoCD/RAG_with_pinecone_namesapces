@@ -201,7 +201,7 @@ class PineconeService:
             # We use a zero vector query to get all metadata (up to 10k items).
             # This is sufficient for the current scale.
             results = self.index.query(
-                vector=[0.0] * 768, # Dimension should match settings.embedding_dimension
+                vector=[0.0] * settings.embedding_dimension,
                 top_k=10000,
                 namespace=namespace,
                 include_metadata=True
