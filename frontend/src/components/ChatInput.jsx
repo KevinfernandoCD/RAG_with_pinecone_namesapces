@@ -1,48 +1,74 @@
 /**
  * ChatInput Component
- * Text input for sending messages to the RAG system
+ * Multi-line text input with Slack-style toolbar and clean border
  */
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const ChatInput = ({ onSend, disabled }) => {
   const [input, setInput] = useState('');
+  const textareaRef = useRef(null);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+    }
+  }, [input]);
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if (input.trim() && !disabled) {
       onSend(input.trim());
       setInput('');
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
     }
   };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      handleSubmit();
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="chat-input-form">
-      <div className="chat-input-container">
-        <input
-          type="text"
+    <div className="slack-input-wrapper">
+      <div className={`slack-input-container ${disabled ? 'disabled' : ''}`}>
+        <textarea
+          ref={textareaRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Ask a question about your documents..."
+          onKeyDown={handleKeyPress}
+          placeholder="Message #general-assistance"
           disabled={disabled}
-          className="chat-input"
+          className="slack-textarea"
+          rows={1}
         />
-        <button
-          type="submit"
-          disabled={disabled || !input.trim()}
-          className="send-button"
-        >
-          {disabled ? '⏳' : '📤'}
-        </button>
+        <div className="slack-input-toolbar">
+          <div className="toolbar-left">
+            <button className="toolbar-btn" title="Formatting (Coming soon)" disabled>B</button>
+            <button className="toolbar-btn" title="Formatting (Coming soon)" disabled>I</button>
+            <button className="toolbar-btn" title="Links (Coming soon)" disabled>🔗</button>
+          </div>
+          <div className="toolbar-right">
+            <button
+              onClick={handleSubmit}
+              disabled={disabled || !input.trim()}
+              className={`slack-send-btn ${input.trim() ? 'active' : ''}`}
+              title="Send now"
+            >
+              <span className="send-icon">➤</span>
+            </button>
+          </div>
+        </div>
       </div>
-    </form>
+      <div className="input-footer-hint">
+        <b>Enter</b> to send, <b>Shift + Enter</b> for new line
+      </div>
+    </div>
   );
 };
 

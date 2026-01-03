@@ -99,6 +99,40 @@ export const getTenantStats = async (tenantId) => {
 };
 
 /**
+ * Get all document names for a tenant
+ */
+export const getTenantDocuments = async (tenantId) => {
+  try {
+    const response = await apiClient.get('/tenant/documents', {
+      headers: { 'X-Tenant-ID': tenantId }
+    });
+    return { success: true, data: response.data };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.response?.data?.detail || 'Failed to get documents',
+    };
+  }
+};
+
+/**
+ * Delete a document by filename
+ */
+export const deleteTenantDocument = async (tenantId, filename) => {
+  try {
+    const response = await apiClient.delete(`/tenant/documents/${encodeURIComponent(filename)}`, {
+      headers: { 'X-Tenant-ID': tenantId }
+    });
+    return { success: true, data: response.data };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.response?.data?.detail || 'Failed to delete document',
+    };
+  }
+};
+
+/**
  * Health check
  */
 export const healthCheck = async () => {

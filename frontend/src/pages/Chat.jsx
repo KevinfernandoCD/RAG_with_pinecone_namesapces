@@ -1,13 +1,18 @@
 /**
  * Chat Page with Multi-Workspace Support
- * Main chat interface with workspace management
+ * Main chat interface with Slack-style triple-column layout
  */
 import React, { useState, useEffect, useRef } from 'react';
 import ChatMessage from '../components/ChatMessage';
 import ChatInput from '../components/ChatInput';
 import FileUpload from '../components/FileUpload';
 import WorkspaceSidebar from '../components/WorkspaceSidebar';
-import { sendQuery, getTenantStats } from '../services/api';
+import { 
+  sendQuery, 
+  getTenantStats, 
+  getTenantDocuments, 
+  deleteTenantDocument 
+} from '../services/api';
 
 const Chat = () => {
   // Workspace state
@@ -19,6 +24,7 @@ const Chat = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [stats, setStats] = useState({});
+  const [documents, setDocuments] = useState({});
   
   const messagesEndRef = useRef(null);
 
@@ -54,16 +60,17 @@ const Chat = () => {
     }
   }, []);
 
-  // Load stats when active workspace changes
+  // Load stats and documents when active workspace changes
   useEffect(() => {
     if (activeWorkspace) {
       loadStats(activeWorkspace);
+      loadDocuments(activeWorkspace);
       
       // Add welcome message if no messages exist
       if (!messages[activeWorkspace] || messages[activeWorkspace].length === 0) {
         const welcomeMessage = {
           role: 'assistant',
-          content: `👋 Welcome to ${activeWorkspace}! Upload documents to get started, or ask me questions about your knowledge base.`,
+          content: `👋 Welcome to the **#${activeWorkspace}** workspace! \n\nI can help you analyze your documents. To get started, upload a PDF in the sidebar on the left.`,
         };
         updateMessages(activeWorkspace, [welcomeMessage]);
       }
@@ -83,6 +90,25 @@ const Chat = () => {
     const result = await getTenantStats(workspaceId);
     if (result.success) {
       setStats(prev => ({ ...prev, [workspaceId]: result.data }));
+    }
+  };
+
+  const loadDocuments = async (workspaceId) => {
+    const result = await getTenantDocuments(workspaceId);
+    if (result.success) {
+      setDocuments(prev => ({ ...prev, [workspaceId]: result.data.documents }));
+    }
+  };
+
+  const handleDeleteDocument = async (filename) => {
+    if (!activeWorkspace || !window.confirm(`Delete "${filename}" from knowledge base?`)) return;
+    
+    const result = await deleteTenantDocument(activeWorkspace, filename);
+    if (result.success) {
+      loadStats(activeWorkspace);
+      loadDocuments(activeWorkspace);
+    } else {
+      alert(`Failed to delete document: ${result.error}`);
     }
   };
 
@@ -173,11 +199,12 @@ const Chat = () => {
     
     setUploading(false);
     loadStats(activeWorkspace);
+    loadDocuments(activeWorkspace);
     
     const currentMessages = messages[activeWorkspace] || [];
     const successMessage = {
       role: 'assistant',
-      content: `✅ Successfully uploaded ${data.files_processed} file(s) with ${data.total_chunks} chunks! You can now ask questions about them.`,
+      content: `✅ Successfully uploaded **${data.files_processed}** file(s). I've indexed **${data.total_chunks}** chunks in your knowledge base.`,
     };
     updateMessages(activeWorkspace, [...currentMessages, successMessage]);
   };
@@ -194,48 +221,67 @@ const Chat = () => {
 
   const currentMessages = activeWorkspace ? (messages[activeWorkspace] || []) : [];
   const currentStats = activeWorkspace ? stats[activeWorkspace] : null;
-
-  // Update workspace message counts
-  const workspacesWithCounts = workspaces.map(w => ({
-    ...w,
-    messageCount: messages[w.id]?.length || 0
-  }));
+  const currentDocuments = activeWorkspace ? (documents[activeWorkspace] || []) : [];
 
   return (
-    <div className="chat-container">
-      {/* Workspace Sidebar */}
+    <div className="layout-root">
+      {/* Column 1: Workspace Rail */}
       <WorkspaceSidebar
-        workspaces={workspacesWithCounts}
+        workspaces={workspaces}
         activeWorkspace={activeWorkspace}
         onWorkspaceChange={handleWorkspaceChange}
         onAddWorkspace={handleAddWorkspace}
         onDeleteWorkspace={handleDeleteWorkspace}
       />
 
-      {/* Main Chat Area */}
-      <div className="chat-main-wrapper">
-        {/* Header */}
-        <div className="chat-header">
-          <div className="header-left">
-            <h1>🤖 RAG Assistant</h1>
-            <div className="tenant-info">
-              <span className="tenant-label">Workspace:</span>
-              <span className="tenant-id">{activeWorkspace}</span>
-            </div>
+      {/* Main Content Area (Column 2 + 3) */}
+      <div className="main-content-area">
+        
+        {/* Column 2: Secondary Sidebar (Context/Docs) */}
+        <div className="secondary-sidebar">
+          <div className="sidebar-header">
+            <h2>{activeWorkspace}</h2>
           </div>
-          <div className="header-right">
+          
+          <div className="sidebar-section">
+            <h4 className="section-title">Knowledge Base</h4>
             {currentStats && (
-              <div className="stats-badge">
-                📚 {currentStats.document_count} documents
+              <div className="kb-stats">
+                <div className="stat-item">
+                  <span className="stat-label">Documents</span>
+                  <span className="stat-value">{currentStats.document_count || 0}</span>
+                </div>
               </div>
             )}
           </div>
-        </div>
 
-        {/* Main Content */}
-        <div className="chat-main">
-          {/* File Upload Sidebar */}
-          <div className="chat-sidebar">
+          <div className="sidebar-divider"></div>
+
+          <div className="sidebar-section scrollable">
+            <h4 className="section-title">Manage Files</h4>
+            <div className="doc-list">
+              {currentDocuments.length === 0 ? (
+                <div className="no-docs-hint">No documents uploaded yet.</div>
+              ) : (
+                currentDocuments.map((doc, idx) => (
+                  <div key={idx} className="doc-list-item">
+                    <span className="doc-name" title={doc}>📄 {doc}</span>
+                    <button 
+                      className="doc-delete-btn" 
+                      onClick={() => handleDeleteDocument(doc)}
+                      title="Delete document"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="sidebar-divider"></div>
+
+          <div className="sidebar-section">
             <FileUpload 
               tenantId={activeWorkspace}
               onUploadStart={handleUploadStart}
@@ -244,41 +290,61 @@ const Chat = () => {
             />
           </div>
 
-          {/* Chat Area */}
-          <div className="chat-area">
-            <div className="messages-container">
+          <div className="sidebar-footer">
+             <button 
+                className="btn-danger-text" 
+                onClick={() => handleDeleteWorkspace(activeWorkspace)}
+              >
+                Delete Workspace
+             </button>
+          </div>
+        </div>
+
+        {/* Column 3: Main Chat View */}
+        <div className="chat-view">
+          <div className="chat-view-header">
+            <div className="header-channel-info">
+              <span className="hash">#</span>
+              <span className="channel-name">general-assistance</span>
+            </div>
+            <div className="header-actions">
+               {/* Add more actions here if needed */}
+            </div>
+          </div>
+
+          <div className="messages-scroll-area">
+            <div className="messages-list">
               {currentMessages.map((message, index) => (
                 <ChatMessage key={index} message={message} />
               ))}
               {loading && (
-                <div className="loading-indicator">
-                  <div className="typing-dots">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
+                <div className="chat-loading-row">
+                   <div className="typing-indicator-slack">
+                      <span></span><span></span><span></span>
+                   </div>
+                   <span className="loading-text">Assistant is thinking...</span>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
+          </div>
 
-            <div className="chat-input-wrapper">
-              <ChatInput onSend={handleSendMessage} disabled={loading || !activeWorkspace} />
-            </div>
+          <div className="chat-input-row">
+            <ChatInput onSend={handleSendMessage} disabled={loading || !activeWorkspace} />
           </div>
         </div>
-
-        {/* Loading Popup for File Upload */}
-        {uploading && (
-          <div className="loading-popup-overlay">
-            <div className="loading-popup">
-              <div className="loading-spinner"></div>
-              <h3>Uploading PDF...</h3>
-              <p>Processing your document, please wait...</p>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Uploading Overlay */}
+      {uploading && (
+        <div className="slack-overlay">
+          <div className="slack-popup">
+            <div className="slack-spinner"></div>
+            <h3>Processing Documents</h3>
+            <p>Indexing your data for the <strong>#{activeWorkspace}</strong> workspace...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

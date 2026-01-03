@@ -185,6 +185,59 @@ class PineconeService:
             logger.error(f"Failed to get namespace stats: {str(e)}")
             raise
 
+    def list_unique_filenames(self, tenant_id: str) -> List[str]:
+        """
+        List unique filenames in a tenant's namespace.
+        Note: This is a scanning operation, potentially slow for many vectors.
+        For small/medium datasets, we can query with a high top_k.
+        """
+        if not self.index:
+            self.connect()
+        
+        namespace = sanitize_namespace(tenant_id)
+        
+        try:
+            # Pinecone doesn't support 'list unique values' natively easily.
+            # We use a zero vector query to get all metadata (up to 10k items).
+            # This is sufficient for the current scale.
+            results = self.index.query(
+                vector=[0.0] * 768, # Dimension should match settings.embedding_dimension
+                top_k=10000,
+                namespace=namespace,
+                include_metadata=True
+            )
+            
+            filenames = set()
+            for match in results.matches:
+                if match.metadata and "filename" in match.metadata:
+                    filenames.add(match.metadata["filename"])
+            
+            return sorted(list(filenames))
+        except Exception as e:
+            logger.error(f"Failed to list filenames: {str(e)}")
+            return []
+
+    def delete_document_by_filename(self, tenant_id: str, filename: str) -> int:
+        """
+        Delete all vectors associated with a specific filename in a namespace.
+        """
+        if not self.index:
+            self.connect()
+        
+        namespace = sanitize_namespace(tenant_id)
+        
+        try:
+            # Pinecone allows deletion by filter
+            self.index.delete(
+                filter={"filename": filename},
+                namespace=namespace
+            )
+            logger.info(f"Deleted document {filename} from namespace {namespace}")
+            return 1
+        except Exception as e:
+            logger.error(f"Failed to delete document {filename}: {str(e)}")
+            raise
+
 
 # Global Pinecone service instance
 pinecone_service = PineconeService()

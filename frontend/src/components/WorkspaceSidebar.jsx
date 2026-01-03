@@ -1,6 +1,6 @@
 /**
  * Workspace Sidebar Component
- * Manages multiple organization workspaces
+ * Manages multiple organization workspaces (Slack-style Rail)
  */
 import React, { useState } from 'react';
 
@@ -34,58 +34,38 @@ const WorkspaceSidebar = ({
     setShowModal(false);
   };
 
-  const handleDelete = (workspaceId, e) => {
-    e.stopPropagation();
-    if (workspaces.length === 1) {
-      alert('Cannot delete the last workspace');
-      return;
-    }
-    if (confirm(`Delete workspace "${workspaceId}"?`)) {
-      onDeleteWorkspace(workspaceId);
-    }
+  const getInitials = (id) => {
+    return id.substring(0, 2).toUpperCase();
   };
 
   return (
     <>
-      <div className="workspace-sidebar">
-        <div className="workspace-header">
-          <h3>🏢 Workspaces</h3>
-        </div>
-
-        <div className="workspace-list">
+      <div className="workspace-rail">
+        <div className="rail-top">
           {workspaces.map((workspace) => (
             <div
               key={workspace.id}
-              className={`workspace-item ${activeWorkspace === workspace.id ? 'active' : ''}`}
+              className={`rail-item ${activeWorkspace === workspace.id ? 'active' : ''}`}
               onClick={() => onWorkspaceChange(workspace.id)}
+              title={workspace.id}
             >
-              <div className="workspace-info">
-                <div className="workspace-icon">
-                  {activeWorkspace === workspace.id ? '✓' : '○'}
-                </div>
-                <div className="workspace-details">
-                  <div className="workspace-name">{workspace.id}</div>
-                  <div className="workspace-meta">
-                    {workspace.messageCount || 0} messages
-                  </div>
-                </div>
+              <div className="rail-icon">
+                {getInitials(workspace.id)}
               </div>
-              {workspaces.length > 1 && (
-                <button
-                  className="workspace-delete"
-                  onClick={(e) => handleDelete(workspace.id, e)}
-                  title="Delete workspace"
-                >
-                  ×
-                </button>
-              )}
+              <div className="rail-active-indicator"></div>
             </div>
           ))}
         </div>
 
-        <button className="add-workspace-btn" onClick={() => setShowModal(true)}>
-          + New Workspace
-        </button>
+        <div className="rail-bottom">
+          <button 
+            className="rail-action-btn add" 
+            onClick={() => setShowModal(true)}
+            title="Add Workspace"
+          >
+            +
+          </button>
+        </div>
       </div>
 
       {/* Add Workspace Modal */}
@@ -93,21 +73,22 @@ const WorkspaceSidebar = ({
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Add New Workspace</h3>
+              <h3>Create a Workspace</h3>
               <button className="modal-close" onClick={() => setShowModal(false)}>
                 ×
               </button>
             </div>
 
             <div className="modal-body">
-              <label htmlFor="workspace-key">Organization Key</label>
+              <p className="modal-desc">Enter your organization's key to join or create a workspace.</p>
+              <label htmlFor="workspace-key">Workspace Key</label>
               <input
                 id="workspace-key"
                 type="text"
                 value={newWorkspaceKey}
                 onChange={(e) => setNewWorkspaceKey(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleAddWorkspace()}
-                placeholder="e.g., my-organization"
+                placeholder="e.g., acme-inc"
                 autoFocus
                 className="workspace-input"
               />
@@ -119,7 +100,7 @@ const WorkspaceSidebar = ({
                 Cancel
               </button>
               <button className="btn-primary" onClick={handleAddWorkspace}>
-                Add Workspace
+                Create
               </button>
             </div>
           </div>

@@ -1,6 +1,6 @@
 /**
  * FileUpload Component
- * Handles PDF file upload to the backend
+ * Compact version for the secondary sidebar
  */
 import React, { useState } from 'react';
 import { uploadDocument } from '../services/api';
@@ -13,22 +13,14 @@ const FileUpload = ({ tenantId, onUploadStart, onUploadSuccess, onUploadError })
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate file type
     if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
-      setMessage('❌ Please select a PDF file');
+      setMessage('❌ Select a PDF');
       setTimeout(() => setMessage(''), 3000);
       return;
     }
 
-    // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      setMessage('❌ File size must be less than 10MB');
-      setTimeout(() => setMessage(''), 3000);
-      return;
-    }
-
-    if (!tenantId) {
-      setMessage('❌ No workspace selected');
+      setMessage('❌ Max 10MB');
       setTimeout(() => setMessage(''), 3000);
       return;
     }
@@ -36,51 +28,35 @@ const FileUpload = ({ tenantId, onUploadStart, onUploadSuccess, onUploadError })
     setUploading(true);
     setMessage('');
     
-    // Notify parent component that upload started
     if (onUploadStart) {
       onUploadStart();
     }
 
     const result = await uploadDocument(tenantId, file);
-
     setUploading(false);
 
     if (result.success) {
-      const data = result.data;
-      setMessage(`✅ Uploaded ${data.files_processed} file(s) - ${data.total_chunks} chunks!`);
-      
-      // Notify parent component of success
       if (onUploadSuccess) {
         onUploadSuccess(result.data);
       }
-      
-      // Clear message after 5 seconds
-      setTimeout(() => setMessage(''), 5000);
     } else {
-      setMessage(`❌ ${result.error}`);
-      
-      // Notify parent component of error
+      setMessage('❌ Failed');
       if (onUploadError) {
         onUploadError(result.error);
       }
-      
-      // Clear message after 5 seconds
       setTimeout(() => setMessage(''), 5000);
     }
 
-    e.target.value = ''; // Reset input
+    e.target.value = '';
   };
 
   return (
-    <div className="file-upload-container">
-      <div className="file-upload-header">
-        <h3>📄 Upload Documents</h3>
-        <p>Upload PDF files to add them to your knowledge base</p>
-      </div>
-      
-      <div className="file-upload-input-wrapper">
-        <label htmlFor="file-upload" className="file-upload-label">
-          {uploading ? '⏳ Uploading...' : '📁 Choose PDF File'}
+    <div className="compact-upload">
+      <h4 className="section-title">Add Content</h4>
+      <div className="upload-box">
+        <label htmlFor="file-upload" className="slack-upload-label">
+          <span className="icon">➕</span>
+          <span className="text">{uploading ? 'Uploading...' : 'Upload PDF'}</span>
         </label>
         <input
           id="file-upload"
@@ -88,15 +64,11 @@ const FileUpload = ({ tenantId, onUploadStart, onUploadSuccess, onUploadError })
           accept=".pdf,application/pdf"
           onChange={handleFileChange}
           disabled={uploading || !tenantId}
-          className="file-upload-input"
+          style={{ display: 'none' }}
         />
       </div>
-
-      {message && (
-        <div className={`upload-message ${message.includes('✅') ? 'success' : 'error'}`}>
-          {message}
-        </div>
-      )}
+      {message && <div className="upload-mini-msg">{message}</div>}
+      <p className="upload-hint">Upload PDFs to train your AI in this workspace.</p>
     </div>
   );
 };

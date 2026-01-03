@@ -259,3 +259,40 @@ async def get_tenant_stats(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get tenant stats: {str(e)}"
         )
+
+
+@router.get("/tenant/documents", tags=["Tenant"])
+async def list_tenant_documents(
+    tenant_id: str = Depends(get_tenant_id)
+):
+    """
+    List all unique filenames for a tenant.
+    """
+    try:
+        filenames = pinecone_service.list_unique_filenames(tenant_id)
+        return {"tenant_id": tenant_id, "documents": filenames}
+    except Exception as e:
+        logger.error(f"Failed to list documents: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list documents: {str(e)}"
+        )
+
+
+@router.delete("/tenant/documents/{filename}", tags=["Tenant"])
+async def delete_tenant_document(
+    filename: str,
+    tenant_id: str = Depends(get_tenant_id)
+):
+    """
+    Delete a specific document by filename for a tenant.
+    """
+    try:
+        pinecone_service.delete_document_by_filename(tenant_id, filename)
+        return {"success": True, "message": f"Document {filename} deleted", "tenant_id": tenant_id}
+    except Exception as e:
+        logger.error(f"Failed to delete document: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete document: {str(e)}"
+        )
