@@ -17,6 +17,7 @@ const Chat = () => {
   // Chat state
   const [messages, setMessages] = useState({});
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [stats, setStats] = useState({});
   
   const messagesEndRef = useRef(null);
@@ -142,8 +143,8 @@ const Chat = () => {
 
     setLoading(true);
 
-    // Send query to backend with active workspace tenant ID
-    const result = await sendQuery(activeWorkspace, question);
+    // Send query to backend with active workspace tenant ID and top_k=10
+    const result = await sendQuery(activeWorkspace, question, 10);
 
     if (result.success) {
       const assistantMessage = {
@@ -163,16 +164,32 @@ const Chat = () => {
     setLoading(false);
   };
 
-  const handleUploadSuccess = () => {
+  const handleUploadStart = () => {
+    setUploading(true);
+  };
+
+  const handleUploadSuccess = (data) => {
     if (!activeWorkspace) return;
     
+    setUploading(false);
     loadStats(activeWorkspace);
+    
     const currentMessages = messages[activeWorkspace] || [];
     const successMessage = {
       role: 'assistant',
-      content: '✅ Documents uploaded successfully! You can now ask questions about them.',
+      content: `✅ Successfully uploaded ${data.files_processed} file(s) with ${data.total_chunks} chunks! You can now ask questions about them.`,
     };
     updateMessages(activeWorkspace, [...currentMessages, successMessage]);
+  };
+
+  const handleUploadError = (error) => {
+    setUploading(false);
+    const currentMessages = messages[activeWorkspace] || [];
+    const errorMessage = {
+      role: 'assistant',
+      content: `❌ Upload failed: ${error}`,
+    };
+    updateMessages(activeWorkspace, [...currentMessages, errorMessage]);
   };
 
   const currentMessages = activeWorkspace ? (messages[activeWorkspace] || []) : [];
@@ -221,7 +238,9 @@ const Chat = () => {
           <div className="chat-sidebar">
             <FileUpload 
               tenantId={activeWorkspace}
-              onUploadSuccess={handleUploadSuccess} 
+              onUploadStart={handleUploadStart}
+              onUploadSuccess={handleUploadSuccess}
+              onUploadError={handleUploadError}
             />
           </div>
 
@@ -248,6 +267,17 @@ const Chat = () => {
             </div>
           </div>
         </div>
+
+        {/* Loading Popup for File Upload */}
+        {uploading && (
+          <div className="loading-popup-overlay">
+            <div className="loading-popup">
+              <div className="loading-spinner"></div>
+              <h3>Uploading PDF...</h3>
+              <p>Processing your document, please wait...</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import { uploadDocument } from '../services/api';
 
-const FileUpload = ({ tenantId, onUploadSuccess }) => {
+const FileUpload = ({ tenantId, onUploadStart, onUploadSuccess, onUploadError }) => {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -34,25 +34,41 @@ const FileUpload = ({ tenantId, onUploadSuccess }) => {
     }
 
     setUploading(true);
-    setMessage('📤 Uploading...');
+    setMessage('');
+    
+    // Notify parent component that upload started
+    if (onUploadStart) {
+      onUploadStart();
+    }
 
     const result = await uploadDocument(tenantId, file);
 
+    setUploading(false);
+
     if (result.success) {
       const data = result.data;
-      setMessage(`✅ Uploaded ${data.files_processed} file(s) - ${data.total_chunks} chunks created!`);
+      setMessage(`✅ Uploaded ${data.files_processed} file(s) - ${data.total_chunks} chunks!`);
+      
+      // Notify parent component of success
       if (onUploadSuccess) {
         onUploadSuccess(result.data);
       }
+      
+      // Clear message after 5 seconds
+      setTimeout(() => setMessage(''), 5000);
     } else {
       setMessage(`❌ ${result.error}`);
+      
+      // Notify parent component of error
+      if (onUploadError) {
+        onUploadError(result.error);
+      }
+      
+      // Clear message after 5 seconds
+      setTimeout(() => setMessage(''), 5000);
     }
 
-    setUploading(false);
     e.target.value = ''; // Reset input
-
-    // Clear message after 5 seconds
-    setTimeout(() => setMessage(''), 5000);
   };
 
   return (
