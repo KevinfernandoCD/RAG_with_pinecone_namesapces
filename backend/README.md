@@ -228,7 +228,7 @@ curl -X POST http://localhost:8000/query \
   -d '{"question": "What is the main topic?"}'
 ```
 
-### Testing with Swagger UI
+### How To Test
 
 FastAPI automatically generates **interactive API documentation** at http://localhost:8000/docs
 
