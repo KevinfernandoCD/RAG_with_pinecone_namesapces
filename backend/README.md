@@ -278,6 +278,10 @@ You'll see all API endpoints with interactive testing capabilities.
      "tenant_id": "test-org"
    }
    ```
+<img width="1389" height="658" alt="Screenshot 2026-01-03 at 15 18 19" src="https://github.com/user-attachments/assets/45294048-a758-4ad2-b7c3-eb41aac4646d" />
+<img width="1389" height="658" alt="Screenshot 2026-01-03 at 15 18 41" src="https://github.com/user-attachments/assets/503dd702-d173-4b71-9814-3a0096de1ca5" />
+
+   
 
 #### Step 4: Query the RAG System
 
@@ -293,6 +297,9 @@ You'll see all API endpoints with interactive testing capabilities.
    }
    ```
 5. Click **"Execute"** button
+<img width="1389" height="658" alt="Screenshot 2026-01-03 at 15 21 23" src="https://github.com/user-attachments/assets/d256d50e-3ee1-4c5f-8e2a-ae761d019e4f" />
+
+
 6. See response:
    ```json
    {
@@ -310,6 +317,9 @@ You'll see all API endpoints with interactive testing capabilities.
      "tenant_id": "test-org"
    }
    ```
+
+   <img width="1389" height="658" alt="Screenshot 2026-01-03 at 15 22 41" src="https://github.com/user-attachments/assets/34f153b2-0e94-49da-8738-e8ecaf44ab73" />
+
 
 #### Step 5: Get Tenant Statistics
 
