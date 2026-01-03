@@ -228,6 +228,131 @@ curl -X POST http://localhost:8000/query \
   -d '{"question": "What is the main topic?"}'
 ```
 
+### Testing with Swagger UI
+
+FastAPI automatically generates **interactive API documentation** at http://localhost:8000/docs
+
+#### Step 1: Access Swagger UI
+
+1. Start the backend server:
+   ```bash
+   source venv/bin/activate
+   uvicorn app.main:app --reload
+   ```
+
+2. Open browser: **http://localhost:8000/docs**
+
+You'll see all API endpoints with interactive testing capabilities.
+
+#### Step 2: Test Health Check
+
+1. Click on **`GET /health`** endpoint
+2. Click **"Try it out"** button
+3. Click **"Execute"** button
+4. See response:
+   ```json
+   {
+     "status": "ok",
+     "environment": "development",
+     "version": "1.0.0"
+   }
+   ```
+
+#### Step 3: Upload PDF Document
+
+1. Click on **`POST /upload-files`** endpoint
+2. Click **"Try it out"** button
+3. In **Parameters** section:
+   - Add header: `X-Tenant-ID` = `test-org`
+4. In **Request body** section:
+   - Click **"Choose File"** and select a PDF
+5. Click **"Execute"** button
+6. See response:
+   ```json
+   {
+     "success": true,
+     "files_processed": 1,
+     "total_chunks": 12,
+     "document_ids": ["uuid-1", "uuid-2", ...],
+     "message": "Successfully uploaded 1 file(s) with 12 chunks",
+     "tenant_id": "test-org"
+   }
+   ```
+
+#### Step 4: Query the RAG System
+
+1. Click on **`POST /query`** endpoint
+2. Click **"Try it out"** button
+3. In **Parameters** section:
+   - Add header: `X-Tenant-ID` = `test-org`
+4. In **Request body** section, enter:
+   ```json
+   {
+     "question": "What is the main topic of the document?",
+     "top_k": 5
+   }
+   ```
+5. Click **"Execute"** button
+6. See response:
+   ```json
+   {
+     "answer": "The document discusses...",
+     "sources": [
+       {
+         "text": "Relevant chunk 1...",
+         "metadata": {
+           "filename": "document.pdf",
+           "chunk_index": 0
+         },
+         "score": 0.85
+       }
+     ],
+     "tenant_id": "test-org"
+   }
+   ```
+
+#### Step 5: Get Tenant Statistics
+
+1. Click on **`GET /tenant/stats`** endpoint
+2. Click **"Try it out"** button
+3. In **Parameters** section:
+   - Add header: `X-Tenant-ID` = `test-org`
+4. Click **"Execute"** button
+5. See response:
+   ```json
+   {
+     "tenant_id": "test-org",
+     "document_count": 12,
+     "index_name": "multi-tenant-rag"
+   }
+   ```
+
+#### Step 6: Test Different Tenants
+
+To test multi-tenant isolation:
+
+1. Upload a PDF with `X-Tenant-ID: org-a`
+2. Upload a different PDF with `X-Tenant-ID: org-b`
+3. Query with `X-Tenant-ID: org-a` - should only return results from org-a
+4. Query with `X-Tenant-ID: org-b` - should only return results from org-b
+
+#### Swagger UI Features
+
+- **Try it out**: Interactive testing of all endpoints
+- **Request body**: Pre-filled JSON schemas
+- **Responses**: See all possible response codes
+- **Models**: View Pydantic model schemas
+- **Authorization**: Add headers easily
+- **Download**: Export OpenAPI spec (JSON/YAML)
+
+#### Alternative: ReDoc
+
+For a different documentation view, visit: **http://localhost:8000/redoc**
+
+- Cleaner, read-only documentation
+- Better for sharing with team
+- Same OpenAPI spec, different UI
+
 ---
 
 ## 🚢 Production Deployment
